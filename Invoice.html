@@ -243,6 +243,82 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
   .due-row, .ro-due-row { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .status-tag, .ro-status-tag { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+/* ── DATA MANAGEMENT ───────────────────────── */
+.data-section {
+  margin: 0 16px 20px;
+  border: 1.5px solid var(--rule);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+}
+.data-section-title {
+  padding: 10px 14px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--muted);
+  background: var(--light);
+  border-bottom: 1px solid var(--rule);
+}
+.data-btn-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+.data-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 14px;
+  border: none;
+  background: #fff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.15s;
+  text-align: left;
+  width: 100%;
+}
+.data-btn:first-child { border-right: 1px solid var(--rule); }
+.data-btn:hover { background: var(--light); }
+.data-btn svg { flex-shrink: 0; }
+.data-btn .btn-lbl { display: flex; flex-direction: column; }
+.data-btn .btn-lbl span:first-child { font-weight: 600; font-size: 13px; }
+.data-btn .btn-lbl span:last-child { font-size: 10.5px; color: var(--muted); margin-top: 1px; }
+
+/* import confirm modal */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 200;
+  display: flex; align-items: flex-end; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.22s;
+}
+.modal-overlay.active { opacity: 1; pointer-events: all; }
+.modal-box {
+  background: var(--paper);
+  width: 100%; max-width: 480px;
+  border-radius: 14px 14px 0 0;
+  padding: 20px 20px 32px;
+  transform: translateY(30px);
+  transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+}
+.modal-overlay.active .modal-box { transform: translateY(0); }
+.modal-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--ink); margin-bottom: 8px; }
+.modal-body { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 16px; }
+.modal-body strong { color: var(--ink); }
+.modal-meta { background: var(--light); border-radius: 8px; padding: 10px 12px; font-size: 12.5px; margin-bottom: 16px; }
+.modal-meta div { display: flex; justify-content: space-between; padding: 2px 0; }
+.modal-meta .lbl { color: var(--muted); }
+.modal-meta .val { font-weight: 600; color: var(--ink); }
+.modal-actions { display: flex; gap: 8px; }
+.modal-btn-cancel { flex: 1; padding: 11px; border: 1.5px solid var(--rule); background: #fff; border-radius: var(--radius); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: var(--muted); cursor: pointer; }
+.modal-btn-confirm { flex: 2; padding: 11px; border: none; background: var(--ink); border-radius: var(--radius); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; color: #fff; cursor: pointer; }
+.modal-btn-confirm:hover { background: var(--accent); }
+
 #print-area { display: none; }
 
 @media (min-width: 500px) {
@@ -274,10 +350,37 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
       Past Invoices
       <span class="menu-badge" id="menu-count">0</span>
     </button>
+    <div style="border-top:1px solid rgba(255,255,255,0.08);margin:8px 0"></div>
+    <button class="menu-item" onclick="exportAllData(); closeMenu()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke="white" stroke-width="1.6" stroke-linecap="round"/><polyline points="7 10 12 15 17 10" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="15" x2="12" y2="3" stroke="white" stroke-width="1.6" stroke-linecap="round"/></svg>
+      Export Backup
+    </button>
+    <button class="menu-item" onclick="triggerImport(); closeMenu()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke="white" stroke-width="1.6" stroke-linecap="round"/><polyline points="17 8 12 3 7 8" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="3" x2="12" y2="15" stroke="white" stroke-width="1.6" stroke-linecap="round"/></svg>
+      Import Backup
+    </button>
   </div>
 </div>
 
 <div id="toast"></div>
+
+<!-- Hidden file input for import -->
+<input type="file" id="import-file-input" accept=".json" style="display:none" onchange="handleImportFile(event)">
+
+<!-- Import confirmation modal -->
+<div class="modal-overlay" id="import-modal">
+  <div class="modal-box">
+    <div class="modal-title">Import Data</div>
+    <div class="modal-body">
+      This will <strong>replace all current invoices</strong> with the data from the selected file. Your existing data will be overwritten.
+    </div>
+    <div class="modal-meta" id="import-modal-meta"></div>
+    <div class="modal-actions">
+      <button class="modal-btn-cancel" onclick="cancelImport()">Cancel</button>
+      <button class="modal-btn-confirm" onclick="confirmImport()">✓ Replace &amp; Import</button>
+    </div>
+  </div>
+</div>
 
 <!-- ══════════ SCREEN: HOME ══════════ -->
 <div class="screen active" id="screen-home">
@@ -313,6 +416,27 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
         <div><div class="card-title">View Past Invoices</div><div class="card-desc" id="home-hist-desc">0 invoices saved</div></div>
         <div class="card-arrow">›</div>
       </button>
+    </div>
+
+    <!-- DATA MANAGEMENT -->
+    <div class="data-section">
+      <div class="data-section-title">Data Backup</div>
+      <div class="data-btn-row">
+        <button class="data-btn" onclick="exportAllData()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke="#27ae60" stroke-width="1.8" stroke-linecap="round"/><polyline points="7 10 12 15 17 10" stroke="#27ae60" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="15" x2="12" y2="3" stroke="#27ae60" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <div class="btn-lbl">
+            <span>Export Data</span>
+            <span>Save all invoices to file</span>
+          </div>
+        </button>
+        <button class="data-btn" onclick="triggerImport()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke="#c0392b" stroke-width="1.8" stroke-linecap="round"/><polyline points="17 8 12 3 7 8" stroke="#c0392b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="3" x2="12" y2="15" stroke="#c0392b" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <div class="btn-lbl">
+            <span>Import Data</span>
+            <span>Load from backup file</span>
+          </div>
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -858,6 +982,93 @@ function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.style.opacity = '1';
   clearTimeout(t._t); t._t = setTimeout(() => { t.style.opacity = '0'; }, 2400);
+}
+
+// ─── EXPORT ALL DATA ─────────────────────────────
+function exportAllData() {
+  const history = getHistory();
+  if (history.length === 0) { showToast('No invoices to export'); return; }
+
+  const exportObj = {
+    app: 'JKM Invoice Maker',
+    business: 'Jugal Kishore Maheshwari',
+    exportedAt: new Date().toISOString(),
+    exportedDate: new Date().toLocaleDateString('en-IN'),
+    totalInvoices: history.length,
+    invoices: history
+  };
+
+  const json = JSON.stringify(exportObj, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const dateStr = new Date().toISOString().split('T')[0];
+  a.href = url;
+  a.download = `JKM-Invoices-Backup-${dateStr}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(`✅ Exported ${history.length} invoices`);
+}
+
+// ─── IMPORT DATA ──────────────────────────────────
+let pendingImportData = null;
+
+function triggerImport() {
+  document.getElementById('import-file-input').value = '';
+  document.getElementById('import-file-input').click();
+}
+
+function handleImportFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const parsed = JSON.parse(e.target.result);
+
+      // Validate structure
+      if (!parsed.invoices || !Array.isArray(parsed.invoices)) {
+        alert('Invalid file. This does not appear to be a JKM Invoice backup.'); return;
+      }
+
+      pendingImportData = parsed;
+
+      // Show confirmation modal with file summary
+      const meta = document.getElementById('import-modal-meta');
+      const expDate = parsed.exportedDate || parsed.exportedAt?.split('T')[0] || '—';
+      const paid = parsed.invoices.filter(i => i.amtDue <= 0).length;
+      const pending = parsed.invoices.length - paid;
+      meta.innerHTML = `
+        <div><span class="lbl">File</span><span class="val">${escHtml(file.name)}</span></div>
+        <div><span class="lbl">Exported on</span><span class="val">${escHtml(expDate)}</span></div>
+        <div><span class="lbl">Total invoices</span><span class="val">${parsed.invoices.length}</span></div>
+        <div><span class="lbl">Paid</span><span class="val" style="color:var(--green)">${paid}</span></div>
+        <div><span class="lbl">Pending</span><span class="val" style="color:var(--accent)">${pending}</span></div>
+      `;
+      document.getElementById('import-modal').classList.add('active');
+
+    } catch(err) {
+      alert('Could not read file. Make sure it is a valid JKM backup JSON file.');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function confirmImport() {
+  if (!pendingImportData) return;
+  saveHistory(pendingImportData.invoices);
+  pendingImportData = null;
+  document.getElementById('import-modal').classList.remove('active');
+  refreshHomeStats();
+  showToast(`✅ Imported ${getHistory().length} invoices`);
+}
+
+function cancelImport() {
+  pendingImportData = null;
+  document.getElementById('import-modal').classList.remove('active');
 }
 
 // ─── INIT ─────────────────────────────────────────
